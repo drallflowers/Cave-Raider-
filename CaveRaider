@@ -1,0 +1,40 @@
+import java.awt.CardLayout;
+import java.awt.EventQueue;
+
+import javax.swing.JFrame;
+
+/**
+ * This class is the model of our MVC pattern. It executes the view and controller code by creating a new JFrame and JPanel object.
+ * 
+ * @author Darrall Flowers and Josiah Bodenhamer
+ *
+ */
+
+public class CaveRaider extends JFrame {
+
+	public static void main(String[] args) 
+	{
+        EventQueue.invokeLater(new Runnable() {
+            @Override
+            public void run() {  
+            	//executes Cave Raider JFrame class
+                JFrame ex = new CaveRaider(); 
+                ex.setVisible(true);
+            }
+        });
+	}
+	
+	//JFrame containing the map JPanel which contains all of the game's contents
+	public CaveRaider() 
+    {
+		//map JPanel builds the view of the game
+		add(new Map());
+        setResizable(false);
+        pack();
+        //names the window with the name of the game
+        setTitle("Cave Raider");
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    }  
+	
+}
