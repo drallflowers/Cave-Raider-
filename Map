@@ -1,0 +1,383 @@
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Image;
+import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JPanel;
+import javax.swing.Timer;
+
+/**
+ * This class is our view and controller class. Ideally, these functionalities would be separated, but for the sake of simplicity, 
+ * we have joined them into one.
+ * 
+ * This class builds the visuals of the game using the Java swing library and handles
+ * all of the action listeners for the game.
+ * 
+ * @author Darrall Flowers and Josiah Bodenhamer
+ *
+ */
+
+public class Map extends JPanel implements ActionListener 
+{
+	//defined constants for board information
+	//DO NOT CHANGE DIMENSIONS AS THIS WILL MESS UP THE BACKGROUND IMAGE
+	private final int HEIGHT = 500;
+    private final int WIDTH = 500;
+    private final int DELAY = 130;
+    private final int DOT_SIZE = 10;
+    private final int RANDOM_POSITION = 29;
+    private final int BOARD_DOTS = 2500;
+    
+    //global variables that contain information for the game
+    private boolean downDirection = false;
+    private boolean rightDirection = true;
+    private boolean leftDirection = false;
+    private boolean isInGame = true;
+    private boolean upDirection = false;
+    private int coinXPos;
+    private int coinYPos;
+    private int bodyDots;
+    private Timer timer;
+    private Image snakeBody;
+    private Image gold;
+    private Image snakeHead;
+    private final int xPos[] = new int[BOARD_DOTS];
+    private final int yPos[] = new int[BOARD_DOTS];
+    public Image img;
+    public Image bomb;
+    ArrayList<Bomb> bomblist = new ArrayList<Bomb>();
+    
+    public Map() 
+    {
+    	//sets the background of the panel (game) to a cave picture
+    	img = Toolkit.getDefaultToolkit().createImage("src/background2.png");
+        addKeyListener(new DirectionUpdater());
+        setFocusable(true);
+        //sets the window size to the size specified in the globally defined constant
+        setPreferredSize(new Dimension(WIDTH, HEIGHT));
+        getImages();
+        initializeGame();
+    }
+    
+    //this method initializes the game with the starting position of the snake and the first bomb and coin locations
+    //it also starts the timer for the game which determines the game speed/ movement of the snake
+    private void initializeGame() 
+    {
+    	// the snake starts out with 3 dots (2 plus the head)
+        bodyDots = 3;
+        for (int i = 0; i < bodyDots; i++) 
+        {
+            xPos[i] = 50 - i * 10;
+            yPos[i] = 50;
+        }
+        
+        //updates the gold coins location
+        coinLocation();
+        //updates the bombs location
+        bombLocation();
+        timer = new Timer(DELAY, this);
+        timer.start();
+    }
+
+    //places the gold coin in a new random position on the map
+    private void coinLocation() 
+    {
+        int random = (int) (Math.random() * RANDOM_POSITION);
+        coinXPos = ((random * DOT_SIZE));
+        random = (int) (Math.random() * RANDOM_POSITION);
+        coinYPos = ((random * DOT_SIZE));
+    
+    }
+    
+    //places a bomb in a new random location on the map. this method makes sure that the new bomb
+    //location is not the same as the new gold coin location to avoid automatically losing the game.
+    private void bombLocation()
+    {
+    	 int bombXPos = ((int) (Math.random() * RANDOM_POSITION) * DOT_SIZE);    
+         int bombYPos = ((int) (Math.random() * RANDOM_POSITION) * DOT_SIZE);
+         
+         //checks that the new bomb location does not overlap the new gold coin location
+         if(coinXPos == bombXPos && coinYPos == bombYPos)
+         {
+         	bombXPos = bombXPos +1;
+         	bombYPos = bombYPos + 1;
+         }
+         Bomb bomb = new Bomb(bombXPos, bombYPos);
+         
+         //arraylist keeps track of all bomb locations
+         bomblist.add(bomb);
+    }
+    
+    //loads all of the custom png images into the game
+    private void getImages() 
+    {
+    	ImageIcon head = new ImageIcon("src/head.png");
+        snakeHead = head.getImage();
+        ImageIcon coin = new ImageIcon("src/goldcoin.png");
+        gold = coin.getImage();
+        ImageIcon greenDot = new ImageIcon("src/GreenDot.png");
+        snakeBody = greenDot.getImage();   
+        ImageIcon explode = new ImageIcon("src/bomb.png");
+        bomb = explode.getImage();        
+    }
+    
+    //handles the snake's position and updates its location when the action listener for a button is called
+    private void moveSnakePos() 
+    {
+    	//moves all the snakes body dots
+        for (int i = bodyDots; i > 0; i--) 
+        {
+            xPos[i] = xPos[(i - 1)];
+            yPos[i] = yPos[(i - 1)];
+        }
+
+        if (rightDirection) 
+        {
+            xPos[0] += DOT_SIZE;
+        }
+        if (leftDirection) 
+        {
+            xPos[0] -= DOT_SIZE;
+        }
+      
+        if (downDirection) 
+        {
+            yPos[0] += DOT_SIZE;
+        }
+        if (upDirection) 
+        {
+            yPos[0] -= DOT_SIZE;
+        }
+    }
+    
+    //handles the event in which the snake consumes a gold coin
+    private void checkCoin() 
+    {
+        if ((xPos[0] == coinXPos) && (yPos[0] == coinYPos)) 
+        {
+        	//increase the size of the snake
+            bodyDots++;
+            
+            //calculate a new position for the next bomb to be placed
+            int bombXPos = ((int) (Math.random() * RANDOM_POSITION) * DOT_SIZE);    
+            int bombYPos = ((int) (Math.random() * RANDOM_POSITION) * DOT_SIZE);
+            
+            //creates a new bomb at the specified location
+            Bomb bomb = new Bomb(bombXPos, bombYPos);
+            
+            //updates the bomb location in the list of bombs
+            bomblist.add(bomb);
+            
+            //re-update gold coin location and add a new bomb to the map
+            coinLocation();
+        }
+    }
+
+    //an overridden function from the swing library to visually update the map
+    @Override
+    public void paintComponent(Graphics g) 
+    {
+        super.paintComponent(g);
+        g.drawImage(img, 0, 0, null);
+        doDrawing(g);
+    }
+    
+    //handles the even in which a bomb is consumed
+    private void checkBomb() 
+    {
+    	//loops through all bomb locations in the bomb list
+    	for(int i = 0; i < bomblist.size(); i++){
+    		
+    		//if the snakes position is equal to the bombs position, the snake ate the bomb
+		 if ((xPos[0] == bomblist.get(i).getX()) && (yPos[0] == bomblist.get(i).getY())) 
+	        {
+			    //sets the game to false meaning you lost the game
+	        	isInGame = false;
+        	    if(!isInGame) 
+                {
+                    timer.stop();
+                }
+	        }	
+    	}
+       
+    }
+    
+    //called from the overriden swing library method to update the pictures/ visuals on the map
+    private void doDrawing(Graphics g) 
+    {
+    	//if the player did not lose the game, update the map with a new gold coin and bomb picture at their specified locations
+        if (isInGame) 
+        {
+            g.drawImage(gold, coinXPos, coinYPos, this);
+           
+            for(int i = 0; i < bomblist.size(); i++)
+            {
+           	 	g.drawImage(bomb, bomblist.get(i).getX(), bomblist.get(i).getY(), this);
+            }
+            
+            for (int z = 0; z < bodyDots; z++) 
+            {
+                if (z == 0) 
+                {
+                    g.drawImage(snakeHead, xPos[z], yPos[z], this);
+                } 
+                else 
+                {
+                    g.drawImage(snakeBody, xPos[z], yPos[z], this);
+                }
+            }
+            
+            Toolkit.getDefaultToolkit().sync();
+        } 
+        //else the player lost the game, so cue the game over code
+        else 
+        {
+            gameOver(g);
+        }        
+    }
+
+    //changes the state of logic based on what the user did
+    private void checkForCollision() 
+    {
+    	//if the snake eats itself, then the game over state is saved
+        for (int i = bodyDots; i > 0; i--) 
+        {
+            if ((i > 4) && (xPos[0] == xPos[i]) && (yPos[0] == yPos[i])) 
+            {
+                isInGame = false;
+            }
+        }
+   
+        //if the snake goes off the screen, then they die so the game over state is saved
+        if (yPos[0] >= HEIGHT) 
+        {
+            isInGame = false;
+        }
+
+        if (xPos[0] < 0) 
+        {
+            isInGame = false;
+        }
+        
+        if (xPos[0] >= WIDTH) 
+        {
+            isInGame = false;
+        }
+        
+        if (yPos[0] < 0) 
+        {
+            isInGame = false;
+        }
+   
+        if(!isInGame) 
+        {
+            timer.stop();
+        }
+    }
+
+    //the graphic update for when the game over code is signaled to execute
+    private void gameOver(Graphics g) 
+    {
+    	//prints game over, you died in red when the player loses
+        String message = "Game Over, You Died!";
+        Font small = new Font("Arial", Font.BOLD, 18);
+        FontMetrics metr = getFontMetrics(small);
+        g.setColor(Color.red);
+        g.setFont(small);
+        g.drawString(message, (WIDTH - metr.stringWidth(message)) / 2, HEIGHT / 2);
+        
+    }
+    
+    //calls the proper methods to execute when an event happens given if the player lost the game or not
+    @Override
+    public void actionPerformed(ActionEvent e) 
+    {
+        if (isInGame) 
+        {
+            checkCoin();
+            checkBomb();
+            checkForCollision();
+            moveSnakePos();
+        }
+        repaint();
+    }
+
+    //handles the keystroke events by saving the state of which key was pressed. these state variables are later used in the moveSnakePos() method
+    private class DirectionUpdater extends KeyAdapter 
+    {
+        @Override
+        public void keyPressed(KeyEvent e) 
+        {
+        	//gets which key was pressed
+            int key = e.getKeyCode();
+
+            //depending on which key was pressed, we update the state variables so they can later be used in logic methods
+            if ((key == KeyEvent.VK_LEFT) && (!rightDirection)) 
+            {
+                upDirection = false;
+                leftDirection = true;
+                downDirection = false;
+            }
+
+            if ((key == KeyEvent.VK_RIGHT) && (!leftDirection)) 
+            {
+                upDirection = false;
+                rightDirection = true;
+                downDirection = false;
+            }
+
+            if ((key == KeyEvent.VK_UP) && (!downDirection)) 
+            {
+                upDirection = true;
+                leftDirection = false;
+                rightDirection = false;   
+            }
+
+            if ((key == KeyEvent.VK_DOWN) && (!upDirection)) 
+            {
+                downDirection = true;
+                leftDirection = false;
+                rightDirection = false;       
+            }
+        }
+    }
+    
+    /**
+     * This simple class creates a new bomb object with get and set methods for the location of the bomb.
+     * 
+     * @author Darrall Flowers and Josiah Bodenhamer
+     *
+     */
+    private class Bomb{
+    	private int xpos;
+    	private int ypos;
+    	  
+    	//constructor constructs a new bomb object at the given x position and y position
+    	  public Bomb(int xPos, int yPos)
+    	  {
+    	       xpos = xPos;  
+    	       ypos = yPos;		 
+    	 }
+    	  //gets the x coordinate of the bomb
+    	  public int getX()
+    	  {
+    		  return xpos;
+    	  }
+    	  
+    	  //gets the y coordinate of the bomb
+    	  public int getY()
+    	  {	 
+    		  return ypos;
+    	  }
+     }
+}
